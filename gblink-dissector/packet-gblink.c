@@ -27,13 +27,22 @@ static int hf_gblink_i1 = -1; //Timestamp
 
 static gint ett_gblink = -1;
 
+//Command IDs
+#define CMD_PROTOCOL_VERSION 1
+#define CMD_JOYPAD           101
+#define CMD_SEND_BYTE_MASTER 104
+#define CMD_SEND_BYTE_SLAVE  105
+#define CMD_TIMESTAMP   106
+#define CMD_STATUS       108
+
 static const value_string gblink_cmd_ids[] = {
-    {1, "Protocol version"},
-    {101, "Joypad"},
-    {104, "Send byte (master)"},
-    {105, "Send byte (slave)"},
-    {106, "Timestamp/Framecount sync"},
-    {108, "Status"}
+    {CMD_PROTOCOL_VERSION, "Protocol version"},
+    {CMD_JOYPAD,           "Joypad"},
+    {CMD_SEND_BYTE_MASTER, "Send byte (master)"},
+    {CMD_SEND_BYTE_SLAVE,  "Send byte (slave)"},
+    {CMD_TIMESTAMP,        "Timestamp/Framecount sync"},
+    {CMD_STATUS,           "Status"},
+    {0, NULL}
 };
 
 //Forward declaration of dissector functions
@@ -43,17 +52,86 @@ static void dissect_gblink(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree);
 
 static void dissect_gblink(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
-    proto_item* ti = NULL;
-    proto_tree* gblink_tree = NULL;
+    proto_item* ti;
+    proto_tree* gblink_tree;
     guint8 id;
+    guint32 timestamp;
+
+    //Version info
+    guint8 major_version, minor_version;
+
+    //Joypad info
+    guint8 button_num;
+    const char* button_action;
+
+    //Byte sent in transfer
+    guint8 byte_sent, control;
+    const char* speed;
+
+    //Framecount info
+    guint16 framecount;
+
+    //Status
+    const char* status;
 
     col_clear(pinfo->cinfo, COL_INFO);
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "GB Link");
-    col_set_str(pinfo->cinfo, COL_INFO, val_to_str(id, gblink_cmd_ids, "Unknown command ID '%c'"));
+
+    id = tvb_get_guint8(tvb,0);
+    timestamp = tvb_get_ntohl(tvb,4);
+
+    switch(id)
+    {
+        case CMD_PROTOCOL_VERSION:
+            major_version = tvb_get_guint8(tvb,1);
+            minor_version = tvb_get_guint8(tvb,2);
+            col_append_fstr(pinfo->cinfo, COL_INFO, "Declaring protocol version %d.%d", major_version, minor_version);
+            break;
+
+        //TODO: figure out what buttons the numbers correspond to
+        case CMD_JOYPAD:
+            button_num = tvb_get_guint8(tvb,1) & 0x4;
+            button_action = ((tvb_get_guint8(tvb,1) >> 2) & 0x1) ? "pushed" : "released";
+            col_append_fstr(pinfo->cinfo, COL_INFO, "Button %d %s", button_num, button_action);
+            break;
+
+        case CMD_SEND_BYTE_MASTER:
+            byte_sent = tvb_get_guint8(tvb,1);
+            control = tvb_get_guint8(tvb,2);
+            speed = ((control >> 1) & 0x1) ? "high speed" : "double speed";
+            col_append_fstr(pinfo->cinfo, COL_INFO, "Master sent byte 0x%02x, %s, timestamp=%d", byte_sent, speed, timestamp);
+            break;
+
+        case CMD_SEND_BYTE_SLAVE:
+            byte_sent = tvb_get_guint8(tvb,1);
+            control = tvb_get_guint8(tvb,2);
+            col_append_fstr(pinfo->cinfo, COL_INFO, "Slave sent byte 0x%02x, control=0x%02x", byte_sent, control);
+            break;
+
+        case CMD_TIMESTAMP:
+            framecount = tvb_get_ntohs(tvb,2);
+            if(tvb_get_guint8(tvb,1))
+            {
+                col_append_fstr(pinfo->cinfo, COL_INFO, "Active transfer response, framecount=%d", framecount);
+            }
+            else col_append_fstr(pinfo->cinfo, COL_INFO, "Synchronization, framecount=%d, timestamp=%d", framecount, timestamp);
+            break;
+
+        //Specific to the BGB emulator
+        case CMD_STATUS:
+            status = (tvb_get_guint8(tvb,1) & 0x1) ? "Emulator is paused" : "Emulator is running";
+            col_set_str(pinfo->cinfo, COL_INFO, status);
+            break;
+
+        default:
+            col_set_str(pinfo->cinfo, COL_INFO, val_to_str(id, gblink_cmd_ids, "Unknown Command ID (%d)"));
+            break;
+    }
 
     if(tree)
     {
-        ti = proto_tree_add_protocol_format(tree, proto_gblink, tvb, 0, 8, "Command ID = %c ", id);
+        ti = proto_tree_add_protocol_format(tree, proto_gblink, tvb, 0, 8,
+             "Game Boy Link Cable Protocol");
         gblink_tree = proto_item_add_subtree(ti, ett_gblink);
         proto_tree_add_item(gblink_tree, hf_gblink_b1, tvb, 0, 1, ENC_BIG_ENDIAN);
         proto_tree_add_item(gblink_tree, hf_gblink_b2, tvb, 1, 1, ENC_BIG_ENDIAN);
@@ -71,7 +149,7 @@ void proto_register_gblink(void)
             {
                 "B1/Command", "gblink.b1",
                 FT_UINT8, BASE_DEC,
-                NULL, 0x0,
+                VALS(gblink_cmd_ids), 0x0,
                 "Byte 1 / Link Command", HFILL
             }
         },
