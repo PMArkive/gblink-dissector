@@ -10,6 +10,10 @@
 #include <wireshark/config.h>
 #include <epan/packet.h>
 
+/*
+ * Info: http://bgb.bircd.org/bgblink.html
+ */
+
 const unsigned int GBLINK_PORT = 8765;
 
 static int proto_gblink = -1;
@@ -22,6 +26,15 @@ static int hf_gblink_i1 = -1; //Timestamp
 
 static int ett_gblink = -1;
 
+static const value_string gblink_cmd_ids[] = {
+    {1, "Protocol version"},
+    {101, "Joypad"},
+    {104, "Send byte (master)"},
+    {105, "Send byte (slave)"},
+    {106, "Timestamp/Framecount sync"},
+    {108, "Status"}
+};
+
 //Forward declaration of dissector functions
 void proto_register_gblink(void);
 void proto_reg_handoff_gblink(void);
@@ -29,29 +42,23 @@ static void dissect_gblink(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree);
 
 static void dissect_gblink(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
-    gint offset = 0;
-    gint len = tvb_reported_length(tvb);
+    proto_item* ti = NULL;
+    proto_tree* gblink_tree = NULL;
+    guint8 id;
 
-    col_append_str(pinfo->cinfo, COL_PROTOCOL, "GB");
-    col_append_sep_fstr(pinfo->cinfo, COL_INFO, NULL, "GB", tvb_format_text_wsp(tvb, 0, len));
+    col_clear(pinfo->cinfo, COL_INFO);
+    col_set_str(pinfo->cinfo, COL_PROTOCOL, "Game Boy Link Cable");
+    col_set_str(pinfo->cinfo, COL_INFO, val_to_str(id, gblink_cmd_ids, "Unknown command ID '%c'"));
 
     if(tree)
     {
-        proto_item* ti = NULL;
-        proto_tree* gblink_tree = NULL;
-
-        ti = proto_tree_add_item(tree, proto_gblink, tvb, 0, -1, ENC_NA);
+        ti = proto_tree_add_protocol_format(tree, proto_gblink, tvb, 0, 8, "Command ID = %c ", id);
         gblink_tree = proto_item_add_subtree(ti, ett_gblink);
-
-        proto_tree_add_item(gblink_tree, hf_gblink_b1, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset++;
-        proto_tree_add_item(gblink_tree, hf_gblink_b2, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset++;
-        proto_tree_add_item(gblink_tree, hf_gblink_b3, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset++;
-        proto_tree_add_item(gblink_tree, hf_gblink_b4, tvb, offset, 1, ENC_BIG_ENDIAN);
-        offset++;
-        proto_tree_add_item(gblink_tree, hf_gblink_i1, tvb, offset, 4, ENC_BIG_ENDIAN);
+        proto_tree_add_item(gblink_tree, hf_gblink_b1, tvb, 0, 1, ENC_BIG_ENDIAN);
+        proto_tree_add_item(gblink_tree, hf_gblink_b2, tvb, 1, 1, ENC_BIG_ENDIAN);
+        proto_tree_add_item(gblink_tree, hf_gblink_b3, tvb, 2, 1, ENC_BIG_ENDIAN);
+        proto_tree_add_item(gblink_tree, hf_gblink_b4, tvb, 3, 1, ENC_BIG_ENDIAN);
+        proto_tree_add_item(gblink_tree, hf_gblink_i1, tvb, 4, 4, ENC_BIG_ENDIAN);
     }
 }
 
@@ -114,6 +121,6 @@ void proto_register_gblink(void)
 void proto_reg_handoff_gblink(void)
 {
     static dissector_handle_t gblink_handle;
-    gblink_handle = create_dissector_handle(dissect_gblink, gblink_handle);
+    gblink_handle = create_dissector_handle(dissect_gblink, proto_gblink);
     dissector_add_uint("tcp.port", GBLINK_PORT, gblink_handle);
 }
