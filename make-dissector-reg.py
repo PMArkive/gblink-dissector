@@ -33,7 +33,7 @@ srcdir = sys.argv[1]
 registertype = sys.argv[2]
 if registertype == "plugin" or registertype == "plugin_wtap":
 	tmp_filename = "plugin.c-tmp"
-	final_filename = "plugin.c"
+	final_filename = sys.argv[3]
 	cache_filename = None
 	preamble = """\
 /*
@@ -44,7 +44,7 @@ if registertype == "plugin" or registertype == "plugin_wtap":
 """
 elif registertype == "dissectors":
 	tmp_filename = "register.c-tmp"
-	final_filename = "register.c"
+	final_filename = sys.argv[3]
 	cache_filename = "register-cache.pkl"
 	preamble = """\
 /*
@@ -66,7 +66,7 @@ else:
 #
 # All subsequent arguments are the files to scan.
 #
-files = sys.argv[3:]
+files = sys.argv[4:]
 
 # Create the proper list of filenames
 filenames = []
