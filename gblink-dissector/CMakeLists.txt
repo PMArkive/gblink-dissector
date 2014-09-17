@@ -27,7 +27,7 @@ ADD_LIBRARY(gblink-plugin MODULE
     moduleinfo.h
     ${GBLINK_PLUGIN_SRC}
 )
-
+ADD_DEPENDENCIES(gblink-plugin ${GBPLUGIN_C})
 SET_TARGET_PROPERTIES(gblink-plugin PROPERTIES PREFIX "")
 SET_TARGET_PROPERTIES(gblink-plugin PROPERTIES LINK_FLAGS "${WS_LINK_FLAGS}")
 TARGET_LINK_LIBRARIES(gblink-plugin wireshark)
