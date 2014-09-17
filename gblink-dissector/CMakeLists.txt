@@ -5,4 +5,7 @@
 # or copy at http://opensource.org/licenses/MIT)
 #
 
+MESSAGE(STATUS "Building Game Boy Link Cable plugin.")
+MESSAGE(STATUS "")
+
 BUILD_WIRESHARK_PLUGIN(gblink)
