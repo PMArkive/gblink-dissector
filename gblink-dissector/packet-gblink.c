@@ -14,17 +14,18 @@
  * Info: http://bgb.bircd.org/bgblink.html
  */
 
-const unsigned int GBLINK_PORT = 8765;
+const gint GBLINK_PORT = 8765;
 
 static int proto_gblink = -1;
 
+//Packet fields
 static int hf_gblink_b1 = -1; //Command
 static int hf_gblink_b2 = -1;
 static int hf_gblink_b3 = -1;
 static int hf_gblink_b4 = -1;
 static int hf_gblink_i1 = -1; //Timestamp
 
-static int ett_gblink = -1;
+static gint ett_gblink = -1;
 
 static const value_string gblink_cmd_ids[] = {
     {1, "Protocol version"},
@@ -47,7 +48,7 @@ static void dissect_gblink(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     guint8 id;
 
     col_clear(pinfo->cinfo, COL_INFO);
-    col_set_str(pinfo->cinfo, COL_PROTOCOL, "Game Boy Link Cable");
+    col_set_str(pinfo->cinfo, COL_PROTOCOL, "GB Link");
     col_set_str(pinfo->cinfo, COL_INFO, val_to_str(id, gblink_cmd_ids, "Unknown command ID '%c'"));
 
     if(tree)
@@ -112,9 +113,13 @@ void proto_register_gblink(void)
         }
     };
 
+    static gint *ett[] = {
+        &ett_gblink
+    };
+
     proto_gblink = proto_register_protocol("GB Link Cable Protocol", "GB Link", "gblink");
     proto_register_field_array(proto_gblink, hf, array_length(hf));
-    register_dissector("gblink", dissect_gblink, proto_gblink);
+    proto_register_subtree_array(ett, array_length(ett));
 }
 
 //Handler registration
