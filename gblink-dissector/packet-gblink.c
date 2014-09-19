@@ -32,8 +32,8 @@ static gint ett_gblink = -1;
 #define CMD_JOYPAD           101
 #define CMD_SEND_BYTE_MASTER 104
 #define CMD_SEND_BYTE_SLAVE  105
-#define CMD_TIMESTAMP   106
-#define CMD_STATUS       108
+#define CMD_TIMESTAMP        106
+#define CMD_STATUS           108
 
 static const value_string gblink_cmd_ids[] = {
     {CMD_PROTOCOL_VERSION, "Protocol version"},
@@ -205,5 +205,11 @@ void proto_reg_handoff_gblink(void)
 {
     static dissector_handle_t gblink_handle;
     gblink_handle = create_dissector_handle(dissect_gblink, proto_gblink);
+
+    /*
+     * As the name suggests, this protocol was originally implemented over
+     * a cable, but it is used nowadays by the BGB Game Boy emulator, which
+     * redirects all link cable output to TCP.
+     */
     dissector_add_uint("tcp.port", GBLINK_PORT, gblink_handle);
 }
