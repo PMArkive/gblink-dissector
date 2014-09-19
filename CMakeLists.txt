@@ -5,7 +5,7 @@
 # or copy at http://opensource.org/licenses/MIT)
 #
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-PROJECT(nintendo-dissectors C)
+PROJECT(gblink-dissector C)
 
 SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 
