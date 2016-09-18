@@ -7,6 +7,7 @@
 #  WIRESHARK_LIBRARIES         List of libraries to use wireshark
 #
 #  Copyright (c) 2011 Reinhold Kainhofer <reinhold@kainhofer.com>
+#                2016 Nicholas Corgan <n.corgan@gmail.com>
 #
 #  Redistribution and use is allowed according to the terms of the New
 #  BSD license.
@@ -17,6 +18,10 @@
 # so we need to manually find the libraries and headers
 
 FIND_PATH( WIRESHARK_INCLUDE_DIRS epan/column_info.h PATH_SUFFIXES wireshark )
+IF ( NOT WIRESHARK_INCLUDE_DIRS )
+  FIND_PATH( WIRESHARK_INCLUDE_DIRS epan/column-info.h PATH_SUFFIXES wireshark )
+ENDIF ( NOT WIRESHARK_INCLUDE_DIRS )
+
 FIND_LIBRARY( WIRESHARK_LIBRARIES wireshark )
 
 # Report results
